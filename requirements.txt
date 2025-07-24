@@ -1,0 +1,13 @@
+streamlit
+fastapi
+uvicorn
+requests
+pandas
+scikit-learn
+transformers
+torch
+wikipedia-api
+biopython
+nltk
+python-dotenv
+aiohttp
