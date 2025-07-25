@@ -1,47 +1,62 @@
-class FakeDetector:
+# medical-detector/models/fake_detector.py
+
+from transformers import pipeline
+import torch
+
+class CompactFakeDetector:
     def __init__(self):
+        self.fake_classifier = pipeline(
+            "text-classification",
+            model="martin-ha/toxic-comment-model",
+            device=0 if torch.cuda.is_available() else -1
+        )
+
+        self.medical_keywords = [
+            'doctor', 'patient', 'medicine', 'treatment', 'diagnosis', 'vaccine',
+            'virus', 'covid', 'health', 'medical', 'drug', 'cure', 'symptom'
+        ]
+
         self.fake_indicators = [
-            'miracle cure', 'doctors hate', 'big pharma', 'natural cure',
-            'government hiding', 'secret cure', 'instant cure', 'guaranteed',
-            'amazing discovery', 'breakthrough', 'revolutionary', 'banned',
-            'suppressed', 'conspiracy', 'they don\'t want you to know'
+            'miracle cure', 'doctors hate', 'big pharma', 'secret cure',
+            'guaranteed', 'amazing', 'shocking', 'unbelievable'
         ]
 
-        self.credible_indicators = [
-            'clinical trial', 'peer-reviewed', 'study published', 'research shows',
-            'according to', 'medical journal', 'fda approved', 'cdc recommends',
-            'who guidelines', 'evidence-based', 'randomized controlled'
-        ]
-
-    def predict(self, text: str) -> tuple[bool, float]:
-        """Predict if medical text is fake"""
+    def is_medical(self, text: str):
         text_lower = text.lower()
+        medical_count = sum(1 for word in self.medical_keywords if word in text_lower)
+        total_words = len(text.split())
 
-        # Count fake indicators
-        fake_score = sum(1 for indicator in self.fake_indicators if indicator in text_lower)
-
-        # Count credible indicators
-        credible_score = sum(1 for indicator in self.credible_indicators if indicator in text_lower)
-
-        # Additional checks
-        has_exaggerated_claims = any(word in text_lower for word in ['100%', 'guaranteed', 'instant', 'immediate'])
-        has_fear_mongering = any(word in text_lower for word in ['dangerous', 'deadly', 'kill you', 'poison'])
-        lacks_sources = 'study' not in text_lower and 'research' not in text_lower
-
-        # Scoring logic
-        total_fake_score = fake_score
-        if has_exaggerated_claims:
-            total_fake_score += 0.5
-        if has_fear_mongering and lacks_sources:
-            total_fake_score += 0.5
-
-        # Decision
-        if total_fake_score > credible_score and total_fake_score > 0:
-            confidence = min(0.95, 0.6 + total_fake_score * 0.15)
+        if medical_count >= 2 or medical_count / max(total_words, 1) > 0.1:
+            confidence = min(0.95, 0.6 + medical_count * 0.1)
             return True, confidence
-        elif credible_score > 0:
-            confidence = min(0.95, 0.7 + credible_score * 0.1)
-            return False, confidence
-        else:
-            # Neutral case - slight lean towards real for medical content
-            return False, 0.6
+        return False, 0.8
+
+    def detect_fake(self, text: str):
+        results = {}
+
+        # ML classifier
+        try:
+            ml_result = self.fake_classifier(text)[0]
+            ml_score = ml_result['score'] if ml_result['label'] == 'TOXIC' else 1 - ml_result['score']
+            results['ml_toxic_score'] = ml_score
+        except:
+            ml_score = 0.5
+
+        # Fake indicators
+        text_lower = text.lower()
+        fake_count = sum(1 for indicator in self.fake_indicators if indicator in text_lower)
+        fake_score = min(fake_count / 3.0, 1.0)
+        results['fake_indicators'] = fake_count
+
+        # Credible sources
+        credible_sources = ['cdc', 'who', 'fda', 'mayo clinic', 'harvard']
+        has_credible = any(source in text_lower for source in credible_sources)
+        results['has_credible_source'] = has_credible
+
+        # Ensemble
+        final_score = (ml_score * 0.6 + fake_score * 0.3 - (0.2 if has_credible else 0))
+        is_fake = final_score > 0.5
+        confidence = max(abs(final_score - 0.5) * 2, 0.6)
+        results['final_score'] = final_score
+
+        return is_fake, confidence, results
