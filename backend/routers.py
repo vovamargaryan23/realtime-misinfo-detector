@@ -1,24 +1,15 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi import HTTPException, APIRouter
+from schemas import TextInput, AnalysisResult
 from models.medical_classifier import MedicalClassifier
 from models.fake_detector import FakeDetector
 from services.wikipedia_service import WikipediaService
 from services.pubmed_service import PubMedService
 from database.db import Database
-import uvicorn
-import asyncio
 from datetime import datetime
 
-app = FastAPI(title="Medical Fake News Detector API")
 
-# CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+api_router = APIRouter(prefix="")
+
 
 # Initialize services
 medical_classifier = MedicalClassifier()
@@ -28,21 +19,7 @@ pubmed_service = PubMedService()
 db = Database()
 
 
-class TextInput(BaseModel):
-    text: str
-
-
-class AnalysisResult(BaseModel):
-    is_medical: bool
-    medical_confidence: float
-    is_fake: bool
-    fake_confidence: float
-    evidence: str
-    sources: list
-    processing_time: float
-
-
-@app.post("/analyze", response_model=AnalysisResult)
+@api_router.post("/analyze", response_model=AnalysisResult)
 async def analyze_text(input_data: TextInput):
     """Main analysis endpoint"""
     import time
@@ -116,11 +93,7 @@ async def get_evidence(text: str):
     return evidence, sources
 
 
-@app.get("/stats")
+@api_router.get("/stats")
 async def get_stats():
     """Get analysis statistics"""
     return db.get_stats()
-
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
