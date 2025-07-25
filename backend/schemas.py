@@ -1,8 +1,8 @@
 from pydantic import BaseModel
+from typing import List
 
 class TextInput(BaseModel):
     text: str
-
 
 class AnalysisResult(BaseModel):
     is_medical: bool
@@ -10,5 +10,5 @@ class AnalysisResult(BaseModel):
     is_fake: bool
     fake_confidence: float
     evidence: str
-    sources: list
+    sources: List[str]
     processing_time: float

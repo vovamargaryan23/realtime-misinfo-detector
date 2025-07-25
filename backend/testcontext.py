@@ -21,10 +21,10 @@ except LookupError:
     print("'punkt_tab' download complete.")
 # --- END ADDITION ---
 
-class MedicalClassifier:
+class MedicalKeywordExtractor:
     def __init__(self, model_name: str = 'all-MiniLM-L6-v2'):
         """
-        Initializes the MedicalClassifier with a Sentence Transformer model.
+        Initializes the MedicalKeywordExtractor with a Sentence Transformer model.
         Args:
             model_name (str): The name of the pre-trained model to use.
         """
@@ -78,32 +78,21 @@ class MedicalClassifier:
 
         return extracted_keywords
 
-    def predict(self, text: str, similarity_threshold: float = 0.6) -> tuple[bool, float]:
+    def predict(self, text: str, similarity_threshold: float = 0.6) -> bool:
         """
-        Predicts whether the given text contains any medical-related content and a confidence score.
-        Confidence is based on the average similarity of identified medical keywords.
+        Predicts whether the given text contains any medical-related content.
+        This is a simple binary classification based on whether any keywords
+        exceed the similarity threshold in the entire text.
 
         Args:
             text (str): The input text to analyze.
             similarity_threshold (float): The minimum cosine similarity score
                                           to consider a word as medical-related.
         Returns:
-            tuple[bool, float]: (is_medical, medical_confidence)
-                                - is_medical: True if medical keywords are identified, False otherwise.
-                                - medical_confidence: Average similarity score of identified medical keywords (0.0 to 1.0).
-                                                     Returns 0.0 if no medical keywords are found.
+            bool: True if medical keywords are identified, False otherwise.
         """
         extracted_terms = self.extract(text, similarity_threshold)
-        is_medical = bool(extracted_terms)
-        medical_confidence = 0.0
-
-        if is_medical:
-            # Calculate average similarity of identified terms as confidence
-            confidence_scores = list(extracted_terms.values())
-            if confidence_scores:  # Ensure there are scores to average
-                medical_confidence = sum(confidence_scores) / len(confidence_scores)
-
-        return is_medical, medical_confidence
+        return bool(extracted_terms)
 
     def predict_by_sentence(self, text: str, similarity_threshold: float = 0.6,
                             medical_sentence_ratio_threshold: float = 0.3) -> dict:
@@ -159,3 +148,38 @@ class MedicalClassifier:
             'is_medical_text': overall_is_medical,
             'sentence_details': sentence_details
         }
+
+
+# Example usage:
+def main():
+    extractor = MedicalKeywordExtractor()
+
+    test_paragraphs = [
+        "The patient presented with severe abdominal pain, a common symptom of gastrointestinal disease. Doctors prescribed a new medication for treatment.",
+        "Today's weather is sunny with a high of 25 degrees Celsius. I plan to go for a walk in the park and read a book.",
+        "Researchers are developing a novel vaccine to combat the latest virus strain. Clinical trials are underway to assess its efficacy and safety profile.",
+        "The cat sat on the mat. The dog barked at the mailman. Birds are singing outside."
+    ]
+
+    print("\n--- Running Tests with predict_by_sentence ---")
+    for i, paragraph in enumerate(test_paragraphs):
+        print(f"\n--- Paragraph {i + 1} ---")
+        print(f"Original Text: '{paragraph}'")
+
+        analysis_result = extractor.predict_by_sentence(paragraph, medical_sentence_ratio_threshold=0.5)
+
+        print(f"\nOverall Medical Text Prediction: {analysis_result['is_medical_text']}")
+        print("Sentence-by-sentence Analysis:")
+        for detail in analysis_result['sentence_details']:
+            print(f"  Sentence: '{detail['sentence']}'")
+            print(f"    Is Medical: {detail['is_medical']}")
+            if detail['identified_keywords']:
+                print(f"    Identified Keywords: {', '.join(detail['identified_keywords'].keys())}")
+            else:
+                print("    No medical keywords identified in this sentence.")
+
+        print("-" * 30)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,4 +1,9 @@
+from services.pubmed_service import PubMedService
 class FakeDetector:
+    async def is_medical_based_on_pubmed(text):
+        evidence = await PubMedService.get_evidence(text)
+        return bool(evidence), 0.9 if evidence else 0.1
+
     def __init__(self):
         self.fake_indicators = [
             'miracle cure', 'doctors hate', 'big pharma', 'natural cure',
@@ -12,7 +17,6 @@ class FakeDetector:
             'according to', 'medical journal', 'fda approved', 'cdc recommends',
             'who guidelines', 'evidence-based', 'randomized controlled'
         ]
-
     def predict(self, text: str) -> tuple[bool, float]:
         """Predict if medical text is fake"""
         text_lower = text.lower()
@@ -45,3 +49,5 @@ class FakeDetector:
         else:
             # Neutral case - slight lean towards real for medical content
             return False, 0.6
+
+

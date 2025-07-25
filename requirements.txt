@@ -11,3 +11,4 @@ biopython
 nltk
 python-dotenv
 aiohttp
+pydantic

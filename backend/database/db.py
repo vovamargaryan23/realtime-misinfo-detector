@@ -15,13 +15,14 @@ class Database:
 
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS analyses (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                text TEXT NOT NULL,
-                is_medical BOOLEAN NOT NULL,
-                medical_confidence REAL NOT NULL,
-                is_fake BOOLEAN NOT NULL,
-                fake_confidence REAL NOT NULL,
-                timestamp TEXT NOT NULL
+                                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                                    text TEXT NOT NULL,
+                                                    is_medical BOOLEAN NOT NULL,
+                                                    medical_confidence REAL NOT NULL,
+                                                    is_fake BOOLEAN NOT NULL,
+                                                    fake_confidence REAL NOT NULL,
+                                                    timestamp TEXT NOT
+                                                    NULL
             )
         ''')
 
